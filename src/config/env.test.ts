@@ -93,6 +93,14 @@ describe("parseServerEnv", () => {
     );
   });
 
+  it("points the Google Sheet at Google unless overridden (e2e fakes)", () => {
+    const env = parseServerEnv({ ...supabase, ...smtp });
+    expect(env.GOOGLE_SHEETS_API_BASE_URL).toBe(
+      "https://sheets.googleapis.com",
+    );
+    expect(env.GOOGLE_DRIVE_API_BASE_URL).toBe("https://www.googleapis.com");
+  });
+
   it("rejects short M4 secrets and names them", () => {
     expect(() =>
       parseServerEnv({ ...supabase, ...smtp, DISPATCH_SECRET: "short" }),

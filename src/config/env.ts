@@ -30,6 +30,12 @@ const serverEnvSchema = z
     DISPATCH_SECRET: z.string().min(32).optional(),
     GMAIL_API_BASE_URL: z.url().default("https://gmail.googleapis.com"),
     GOOGLE_OAUTH_TOKEN_URL: z.url().default(GOOGLE_TOKEN_ENDPOINT),
+    /** Google Sheets API v4 (spec §10); e2e points it at the fake. */
+    GOOGLE_SHEETS_API_BASE_URL: z
+      .url()
+      .default("https://sheets.googleapis.com"),
+    /** Google Drive API v3 (spec §10); e2e points it at the fake. */
+    GOOGLE_DRIVE_API_BASE_URL: z.url().default("https://www.googleapis.com"),
   })
   .superRefine((env, context) => {
     const pairs: ReadonlyArray<[keyof typeof env, keyof typeof env]> = [
