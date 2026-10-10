@@ -15,20 +15,20 @@ const connectStateSchema = z.object({
 });
 
 /** What the connect route remembers (httpOnly cookie) for the callback. */
-export type GmailConnectState = z.infer<typeof connectStateSchema>;
+export type GoogleConnectState = z.infer<typeof connectStateSchema>;
 
 /**
- * Google's authorization URL for "Connect Gmail sending" (spec §9): `openid email gmail.send`,
+ * Google's authorization URL for a Google connection (spec §9): `openid email gmail.send`,
  * offline access (refresh token), forced consent so a refresh token is always issued, incremental
  * scopes, and PKCE S256.
  */
-export function createGmailConnectAuthorization(input: {
+export function createGoogleConnectAuthorization(input: {
   clientId: string;
   redirectUri: string;
   workspaceSlug: string;
   next: string | null;
-}): { url: string; state: GmailConnectState } {
-  const state: GmailConnectState = {
+}): { url: string; state: GoogleConnectState } {
+  const state: GoogleConnectState = {
     state: generateToken(),
     verifier: generateToken(),
     workspaceSlug: input.workspaceSlug,
@@ -53,14 +53,14 @@ export function createGmailConnectAuthorization(input: {
 }
 
 /** Cookie-safe encoding (base64url JSON). */
-export function encodeConnectCookie(state: GmailConnectState): string {
+export function encodeConnectCookie(state: GoogleConnectState): string {
   return Buffer.from(JSON.stringify(state)).toString("base64url");
 }
 
 /** Decodes the cookie; null when missing or malformed. */
 export function decodeConnectCookie(
   value: string | undefined,
-): GmailConnectState | null {
+): GoogleConnectState | null {
   if (!value) {
     return null;
   }
@@ -112,7 +112,7 @@ const codeResponseSchema = z.object({
 });
 
 /** What a successful connect consent produced. */
-export type GmailConnectGrant = {
+export type GoogleConnectGrant = {
   refreshToken: string | null;
   scopes: string[];
   claims: IdTokenClaims;
@@ -122,7 +122,7 @@ export type GmailConnectGrant = {
  * Exchanges the authorization code (PKCE verifier + client secret).
  * @throws Error naming only the HTTP status (Google's body may echo the code)
  */
-export async function exchangeGmailCode(
+export async function exchangeGoogleCode(
   input: {
     code: string;
     verifier: string;
@@ -131,7 +131,7 @@ export async function exchangeGmailCode(
     redirectUri: string;
   },
   fetchImpl: typeof fetch = fetch,
-): Promise<GmailConnectGrant> {
+): Promise<GoogleConnectGrant> {
   const response = await fetchImpl(GOOGLE_TOKEN_ENDPOINT, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },

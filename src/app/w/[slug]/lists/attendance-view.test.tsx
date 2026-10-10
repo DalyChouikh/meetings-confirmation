@@ -208,12 +208,14 @@ describe("AttendanceView", () => {
       15,
       "=HYPERLINK(1)",
       null,
+      "2026-09-30 11:00",
       null,
       "Sent",
       "Absent",
       "Door Viewer",
       null,
     ]);
+    expect(sheets[1].data[3][9]).toBe("Answered at");
     expect(sheets[1].data[3].slice(-3)).toEqual([
       "Checked in",
       "Checked in by",

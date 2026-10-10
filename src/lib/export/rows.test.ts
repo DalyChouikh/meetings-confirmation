@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import messages from "../../../messages/en.json";
 import type { AnswerLabels } from "@/lib/responses/describe-answer";
 import type { AttendanceDetailRow, PersonRow } from "@/shared/api/responses";
 import {
@@ -8,6 +9,7 @@ import {
   meetingAnswerRows,
   type ExportText,
 } from "./rows";
+import { exportWords } from "./words";
 
 const labels: AnswerLabels = {
   attending: "Going",
@@ -120,6 +122,7 @@ describe("export rows", () => {
       "",
       "",
       "",
+      "",
       "email:sent",
       "",
       "",
@@ -175,6 +178,55 @@ describe("export rows", () => {
     expect(
       attendanceDetailRows([detail], new Map(), labels, text)[0].slice(-3),
     ).toEqual([{ text: "was:absent", tone: "danger" }, "Amira Ben Ali", null]);
+  });
+});
+
+describe("attendanceDetailRows with the app's words", () => {
+  const words = exportWords("en", messages);
+  const detail: AttendanceDetailRow = {
+    meetingId: "m1",
+    title: "Weekly sync",
+    startsAt: "2026-10-08T17:00:00.000Z",
+    timezone: "Africa/Tunis",
+    responseMode: "attendance",
+    inviteeId: "i1",
+    contactId: "c1",
+    fullName: "Omar",
+    email: "o@uni.tn",
+    emailStatus: "sent",
+    answer: {
+      status: "attending",
+      delayMinutes: null,
+      reason: "",
+      comment: "See you there",
+      afterDeadline: false,
+      needsReconfirmation: false,
+      updatedAt: "2026-10-08T18:05:00.000Z",
+    },
+    mark: null,
+  };
+
+  it("puts Answered at (meeting zone) after Comment, like the meeting export", () => {
+    const [row] = attendanceDetailRows(
+      [detail],
+      new Map(),
+      words.labels,
+      words.text,
+    );
+    expect(row).toHaveLength(15);
+    expect(row[8]).toBe(detail.answer?.comment ?? "");
+    expect(row[9]).toBe("2026-10-08 19:05");
+  });
+
+  it("lets the Google Sheet name the meeting cell its own way", () => {
+    const [row] = attendanceDetailRows(
+      [detail],
+      new Map(),
+      words.labels,
+      words.text,
+      { meetingCell: () => "Weekly sync · Thu 8 Oct" },
+    );
+    expect(row[0]).toBe("Weekly sync · Thu 8 Oct");
   });
 });
 

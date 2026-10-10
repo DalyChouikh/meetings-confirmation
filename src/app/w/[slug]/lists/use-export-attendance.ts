@@ -1,9 +1,13 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import type { ExportFormat } from "@/components/forms/export-menu";
-import { useAnswerLabels } from "@/hooks/use-answer-labels";
+import { useExportWords } from "@/hooks/use-answer-labels";
 import { fetchAllAttendanceDetails } from "@/hooks/use-results";
+import {
+  DETAIL_COLUMNS,
+  type ExportColumn,
+  SUMMARY_COLUMNS,
+} from "@/lib/export/columns";
 import {
   attendanceDetailRows,
   attendanceSummaryRows,
@@ -19,33 +23,6 @@ export type AttendanceExportRow = Parameters<
   typeof attendanceSummaryRows
 >[0][number];
 
-const SUMMARY = [
-  ["name", 24],
-  ["email", 30],
-  ["lists", 20],
-  ["invited", 10],
-  ["attending", 10, "success"],
-  ["late", 10, "warning"],
-  ["absent", 10, "danger"],
-  ["noReply", 10, "neutral"],
-] as const;
-const DETAILS = [
-  ["meeting", 30],
-  ["date", 18],
-  ["name", 24],
-  ["email", 30],
-  ["lists", 20],
-  ["answer", 18],
-  ["lateBy", 12],
-  ["reason", 40],
-  ["comment", 40],
-  ["afterDeadline", 16],
-  ["emailStatus", 16],
-  ["checkedIn", 14],
-  ["checkedInBy", 24],
-  ["wasLateBy", 14],
-] as const;
-
 /**
  * The Attendance export (spec §7.7): CSV is the summary as shown; Excel adds a Details sheet
  * (one row per person per counted meeting) for the same people and period. Excel's title band
@@ -58,15 +35,14 @@ export function useExportAttendance(
   range: PeriodRange,
   periodLabel: string,
 ) {
-  const t = useTranslations("Export");
-  const tStatus = useTranslations("MeetingPage.status");
-  const labels = useAnswerLabels();
+  const words = useExportWords();
+  const { t } = words;
   const { slug } = workspace;
-  const header = (columns: typeof SUMMARY | typeof DETAILS) =>
-    columns.map(([key, width, tone]) => ({
-      header: t(`columns.${key}`),
-      width,
-      tone,
+  const header = (columns: ReadonlyArray<ExportColumn>) =>
+    columns.map((column) => ({
+      header: words.column(column.key),
+      width: column.width,
+      tone: column.tone,
     }));
   return async (
     format: ExportFormat,
@@ -87,7 +63,7 @@ export function useExportAttendance(
     });
     const summary = {
       ...band(t("sheetSummary")),
-      columns: header(SUMMARY),
+      columns: header(SUMMARY_COLUMNS),
       rows: attendanceSummaryRows(shown, listNames),
     };
     if (format === "csv") {
@@ -104,13 +80,13 @@ export function useExportAttendance(
         summary,
         {
           ...band(t("sheetDetails")),
-          columns: header(DETAILS),
-          rows: attendanceDetailRows(details, listNames, labels, {
-            yes: t("yes"),
-            noReply: t("columns.noReply"),
-            emailStatus: (status) => tStatus(status),
-            actual: (value) => t(`actual.${value}`),
-          }),
+          columns: header(DETAIL_COLUMNS),
+          rows: attendanceDetailRows(
+            details,
+            listNames,
+            words.labels,
+            words.text,
+          ),
         },
       ],
       [slug, "attendance"],

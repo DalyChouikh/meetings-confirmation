@@ -18,7 +18,7 @@ import { hasMemberChanges } from "@/lib/meetings/changes";
 import { inviteeTokenHash } from "@/server/crypto/invitee-token";
 import type { GmailSendResult } from "@/server/gmail/gmail-client";
 import { buildMeetingMime, newMessageId } from "@/server/gmail/mime";
-import type { RefreshResult } from "@/server/google/gmail-oauth";
+import type { RefreshResult } from "@/server/google/google-oauth";
 import type {
   BrokenAlert,
   CalendarDecision,

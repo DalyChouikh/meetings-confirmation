@@ -2,33 +2,30 @@ import writeExcelFile, {
   type CellObject,
   type SheetData,
 } from "write-excel-file/universal";
-import { palette } from "@/design/tokens";
 import type { ExportCell } from "./rows";
 import type { ExportSheet } from "./save";
+import {
+  EXPORT_COLORS,
+  EXPORT_FONT_FAMILY,
+  EXPORT_FONT_SIZE,
+  EXPORT_HEADER_ROWS,
+  fittedWidth,
+} from "./theme";
 
-const COLORS = palette.light;
-/** Arial ships with Excel, Numbers and Google Sheets; the app's Space Grotesk does not. */
-const FONT = { fontFamily: "Arial", fontSize: 11 } as const;
+const COLORS = EXPORT_COLORS;
+const FONT = {
+  fontFamily: EXPORT_FONT_FAMILY,
+  fontSize: EXPORT_FONT_SIZE,
+} as const;
 const BORDER = { borderColor: COLORS.ink, borderStyle: "thin" } as const;
-/** Title, subtitle, a gap, then the header: all four stay in place while scrolling. */
-const HEADER_ROWS = 4;
-/** Column width bounds, in characters. */
-const WIDTH_MAX = 60;
 
-/** A column wide enough for its header (bold) and its longest value, at least its set width. */
+/** A column wide enough for its bold header and its longest value (`fittedWidth`). */
 function columnWidth(sheet: ExportSheet, index: number): number {
   const column = sheet.columns[index];
-  const longest = Math.max(
-    0,
-    ...sheet.rows.map((row) => String(cellText(row[index]) ?? "").length),
-  );
-  return Math.min(
-    WIDTH_MAX,
-    Math.max(
-      column.width,
-      Math.ceil(column.header.length * 1.25) + 3,
-      Math.ceil(longest * 1.1) + 2,
-    ),
+  return fittedWidth(
+    column.header,
+    sheet.rows.map((row) => cellText(row[index]) ?? null),
+    column.width,
   );
 }
 
@@ -101,7 +98,7 @@ export function xlsxSheet(sheet: ExportSheet) {
     columns: sheet.columns.map((_, index) => ({
       width: columnWidth(sheet, index),
     })),
-    stickyRowsCount: HEADER_ROWS,
+    stickyRowsCount: EXPORT_HEADER_ROWS,
   };
 }
 

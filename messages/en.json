@@ -156,6 +156,19 @@
       "body": "Google stopped accepting {appName}'s access to the Gmail account that sends {workspace}'s meeting emails, for example after a password change or if access was removed. Queued emails are paused and nothing is lost.",
       "button": "Reconnect Gmail",
       "fallback": "If the button doesn't work, copy this link:"
+    },
+    "sheetPaused": {
+      "subject": "The Google Sheet of {workspace} stopped updating",
+      "preview": "Answers still arrive in {appName}; the Google Sheet waits for you.",
+      "heading": "The Google Sheet of {workspace} stopped updating",
+      "body": {
+        "trashed": "The Google Sheet was moved to the trash. Restore it from Google Drive, then tap Try again in Settings. Or create a new one.",
+        "deleted": "The Google Sheet was deleted. You can create a new one in Settings.",
+        "access_lost": "{appName} can no longer update the Google Sheet, for example after a password change or if access was removed. Reconnect Google in Settings.",
+        "full": "The Google Sheet is full. You can create a new one in Settings."
+      },
+      "button": "Open Settings",
+      "fallback": "If the button doesn't work, copy this link:"
     }
   },
   "ApiErrors": {
