@@ -9,7 +9,10 @@ import {
   responseModeSchema,
 } from "@/shared/api/meeting-settings";
 
-/** Every kind the dispatcher sends; one it doesn't know would fail the whole claim. */
+/**
+ * Every kind the dispatcher sends; one it doesn't know would fail the whole claim. Twin:
+ * `public.job_kind` (M7 removed the kinds nobody used, so the two lists are equal).
+ */
 const jobKindSchema = z.enum([
   "invite",
   "calendar_confirm",

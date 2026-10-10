@@ -100,7 +100,7 @@ describe("parseClaim", () => {
     const claim = parseClaim({
       ...row,
       jobs: [
-        dbJob(1, { kind: "system_email" }),
+        dbJob(1, { kind: "fax" }),
         dbJob(2),
         dbJob(3, { payload: { changes: { title: [{}, "x"] } } }),
         { job_id: "not-a-uuid" },
