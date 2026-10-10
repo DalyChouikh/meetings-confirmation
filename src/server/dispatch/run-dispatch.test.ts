@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GmailSendResult } from "@/server/gmail/gmail-client";
-import type { RefreshResult } from "@/server/google/gmail-oauth";
+import type { RefreshResult } from "@/server/google/google-oauth";
 import type {
   Claim,
   ClaimedJob,

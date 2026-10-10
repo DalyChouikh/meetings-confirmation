@@ -4,7 +4,7 @@ import { getServerEnv } from "@/config/env";
 import { GMAIL_SEND_TIMEOUT_MS } from "@/config/gmail";
 import { publicEnv } from "@/config/public-env";
 import { requireSecret } from "@/config/secrets";
-import { renderSenderBrokenEmail } from "@/emails/sender-broken-email";
+import { renderOwnerAlertEmail } from "@/emails/owner-alert-email";
 import { deriveInviteeToken } from "@/server/crypto/invitee-token";
 import {
   connectionAssociatedData,
@@ -13,7 +13,7 @@ import {
 } from "@/server/crypto/secret-box";
 import { createSystemMailer } from "@/server/email/system-mailer";
 import { sendGmailMessage } from "@/server/gmail/gmail-client";
-import { refreshGoogleAccessToken } from "@/server/google/gmail-oauth";
+import { refreshGoogleAccessToken } from "@/server/google/google-oauth";
 import { createDispatchStore } from "@/server/queries/dispatch";
 import { createSupabaseAdminClient } from "@/server/supabase/admin-client";
 import type { DispatchDeps } from "./run-dispatch";
@@ -55,7 +55,8 @@ export function createDispatchDeps(): DispatchDeps {
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     alertBroken: async (alert) => {
       for (const target of alert) {
-        const content = await renderSenderBrokenEmail({
+        const content = await renderOwnerAlertEmail({
+          kind: "senderBroken",
           workspaceName: target.workspaceName,
           settingsUrl: `${appUrl}/w/${target.workspaceSlug}/settings#sending`,
         });

@@ -26,7 +26,7 @@ vi.mock("@/server/http/require-user", () => ({
 vi.mock("@/server/queries/sender", () => ({
   disconnectGoogleConnection: mocks.disconnect,
 }));
-vi.mock("@/server/google/gmail-oauth", () => ({
+vi.mock("@/server/google/google-oauth", () => ({
   revokeGoogleToken: mocks.revoke,
 }));
 

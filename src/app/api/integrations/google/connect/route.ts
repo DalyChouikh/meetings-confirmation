@@ -11,9 +11,9 @@ import { loginPathFor } from "@/lib/auth-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { senderSettingsPath, withQuery } from "@/lib/with-query";
 import {
-  createGmailConnectAuthorization,
+  createGoogleConnectAuthorization,
   encodeConnectCookie,
-} from "@/server/google/gmail-oauth";
+} from "@/server/google/google-oauth";
 import { requireUser } from "@/server/http/require-user";
 import { getWorkspaceBySlug } from "@/server/queries/workspaces";
 import { createSupabaseServerClient } from "@/server/supabase/server-client";
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!workspace || workspace.myRole !== "owner") {
     return back("owner_only");
   }
-  const { url, state } = createGmailConnectAuthorization({
+  const { url, state } = createGoogleConnectAuthorization({
     clientId: env.GOOGLE_CLIENT_ID,
     redirectUri: `${publicEnv.NEXT_PUBLIC_APP_URL}${GMAIL_CONNECT_CALLBACK_PATH}`,
     workspaceSlug: workspace.slug,

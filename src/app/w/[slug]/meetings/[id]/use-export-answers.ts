@@ -1,33 +1,16 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
 import type { ExportFormat } from "@/components/forms/export-menu";
-import { useAnswerLabels } from "@/hooks/use-answer-labels";
+import { useExportWords } from "@/hooks/use-answer-labels";
 import { fetchAllMeetingPeople } from "@/hooks/use-results";
 import { rosterQueryOptions } from "@/hooks/use-roster";
 import { useWorkspace } from "@/hooks/use-workspace";
+import { ANSWER_COLUMNS } from "@/lib/export/columns";
 import { listNamesByContact, meetingAnswerRows } from "@/lib/export/rows";
 import { saveExport } from "@/lib/export/save";
 import { formatDeadline, formatMeetingWhen } from "@/lib/meetings/format";
 import type { Meeting } from "@/shared/api/meetings";
-
-const WIDTHS = [24, 30, 20, 18, 12, 40, 40, 18, 16, 16, 14, 24, 14];
-const COLUMNS = [
-  "name",
-  "email",
-  "lists",
-  "answer",
-  "lateBy",
-  "reason",
-  "comment",
-  "answeredAt",
-  "afterDeadline",
-  "emailStatus",
-  "checkedIn",
-  "checkedInBy",
-  "wasLateBy",
-] as const;
 
 /**
  * The meeting page's export (spec §7.7): every invitee with their answer, built on the device as
@@ -35,9 +18,8 @@ const COLUMNS = [
  * the workspace, when it is and when it was exported.
  */
 export function useExportAnswers(slug: string, meeting: Meeting) {
-  const t = useTranslations("Export");
-  const tStatus = useTranslations("MeetingPage.status");
-  const labels = useAnswerLabels();
+  const words = useExportWords();
+  const { t } = words;
   const queryClient = useQueryClient();
   const workspace = useWorkspace(slug);
   return async (format: ExportFormat): Promise<void> => {
@@ -48,13 +30,8 @@ export function useExportAnswers(slug: string, meeting: Meeting) {
     const rows = meetingAnswerRows(
       people,
       listNamesByContact(roster),
-      labels,
-      {
-        yes: t("yes"),
-        noReply: t("columns.noReply"),
-        emailStatus: (status) => tStatus(status),
-        actual: (value) => t(`actual.${value}`),
-      },
+      words.labels,
+      words.text,
       meeting.timezone,
     );
     const now = new Date();
@@ -74,9 +51,9 @@ export function useExportAnswers(slug: string, meeting: Meeting) {
             context,
             at: formatDeadline(now.toISOString(), meeting.timezone),
           }),
-          columns: COLUMNS.map((key, index) => ({
-            header: t(`columns.${key}`),
-            width: WIDTHS[index],
+          columns: ANSWER_COLUMNS.map((column) => ({
+            header: words.column(column.key),
+            width: column.width,
           })),
           rows,
         },

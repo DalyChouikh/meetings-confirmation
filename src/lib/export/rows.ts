@@ -77,19 +77,26 @@ function answerText(
     : "";
 }
 
+/** The fields `answerCells` reads, shared by meeting people and attendance details. */
+type AnswerSource = Pick<
+  PersonRow,
+  "contactId" | "fullName" | "email" | "answer" | "emailStatus" | "mark"
+>;
+
 /**
- * Meeting answers: Name, Email, Lists, Answer, Late by (min), Reason, Comment, Answered at
- * (meeting zone), After the deadline, Email, Checked in, Checked in by, Was late by (min) — one row
- * per invitee.
+ * The 13 `ANSWER_COLUMNS` cells for one person: Name, Email, Lists, Answer, Late by (min), Reason,
+ * Comment, Answered at (meeting zone), After the deadline, Email, Checked in, Checked in by, Was
+ * late by (min). Both the meeting export and the attendance details (and so the Google Sheet) use
+ * it, so their columns can't drift apart.
  */
-export function meetingAnswerRows(
-  people: PersonRow[],
+function answerCells(
+  person: AnswerSource,
   listNames: Map<string, string[]>,
   labels: AnswerLabels,
   text: ExportText,
   timezone: string,
-): ExportCell[][] {
-  return people.map((person) => [
+): ExportCell[] {
+  return [
     person.fullName,
     person.email,
     (listNames.get(person.contactId) ?? []).join(", "),
@@ -101,7 +108,20 @@ export function meetingAnswerRows(
     person.answer?.afterDeadline ? text.yes : "",
     text.emailStatus(person.emailStatus),
     ...checkInCells(text, person.mark),
-  ]);
+  ];
+}
+
+/** Meeting answers (`ANSWER_COLUMNS`): one row per invitee. */
+export function meetingAnswerRows(
+  people: PersonRow[],
+  listNames: Map<string, string[]>,
+  labels: AnswerLabels,
+  text: ExportText,
+  timezone: string,
+): ExportCell[][] {
+  return people.map((person) =>
+    answerCells(person, listNames, labels, text, timezone),
+  );
 }
 
 /** Attendance summary: Name, Email, Lists, Invited, Going, Late, Absent, No reply. */
@@ -131,28 +151,20 @@ export function attendanceSummaryRows(
 }
 
 /**
- * Attendance details: Meeting, Date (meeting zone), Name, Email, Lists, Answer, Late by (min),
- * Reason, Comment, After the deadline, Email, Checked in, Checked in by, Was late by (min) — one
- * row per person per counted meeting.
+ * Attendance details and Google Sheet rows (`DETAIL_COLUMNS`): Meeting, Date (meeting zone), then
+ * the 13 answer cells, one row per person per counted meeting. `meetingCell` replaces the plain
+ * title (the sheet adds the date so repeated titles stay apart).
  */
 export function attendanceDetailRows(
   details: AttendanceDetailRow[],
   listNames: Map<string, string[]>,
   labels: AnswerLabels,
   text: ExportText,
+  options: { meetingCell?: (row: AttendanceDetailRow) => string } = {},
 ): ExportCell[][] {
   return details.map((row) => [
-    row.title,
+    options.meetingCell ? options.meetingCell(row) : row.title,
     at(row.startsAt, row.timezone),
-    row.fullName,
-    row.email,
-    (listNames.get(row.contactId) ?? []).join(", "),
-    answerText(labels, text, row.answer, row.emailStatus),
-    row.answer?.delayMinutes ?? null,
-    row.answer?.reason ?? "",
-    row.answer?.comment ?? "",
-    row.answer?.afterDeadline ? text.yes : "",
-    text.emailStatus(row.emailStatus),
-    ...checkInCells(text, row.mark),
+    ...answerCells(row, listNames, labels, text, row.timezone),
   ]);
 }

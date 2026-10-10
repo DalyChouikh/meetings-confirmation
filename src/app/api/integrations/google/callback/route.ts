@@ -19,10 +19,10 @@ import {
 import { tokensEqual } from "@/server/crypto/tokens";
 import {
   decodeConnectCookie,
-  exchangeGmailCode,
+  exchangeGoogleCode,
   revokeGoogleToken,
-  type GmailConnectGrant,
-} from "@/server/google/gmail-oauth";
+  type GoogleConnectGrant,
+} from "@/server/google/google-oauth";
 import { requireUser } from "@/server/http/require-user";
 import {
   saveGoogleConnection,
@@ -91,9 +91,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!workspace || workspace.myRole !== "owner") {
     return fail("owner_only");
   }
-  let grant: GmailConnectGrant;
+  let grant: GoogleConnectGrant;
   try {
-    grant = await exchangeGmailCode({
+    grant = await exchangeGoogleCode({
       code,
       verifier: stored.verifier,
       clientId: env.GOOGLE_CLIENT_ID,

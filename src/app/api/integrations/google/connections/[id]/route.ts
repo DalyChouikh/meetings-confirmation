@@ -7,7 +7,7 @@ import {
   openSecret,
   parseEncryptionKey,
 } from "@/server/crypto/secret-box";
-import { revokeGoogleToken } from "@/server/google/gmail-oauth";
+import { revokeGoogleToken } from "@/server/google/google-oauth";
 import { apiError, fromDatabaseError, ok } from "@/server/http/errors";
 import { rejectCrossOrigin } from "@/server/http/request";
 import { requireUser } from "@/server/http/require-user";
