@@ -5,7 +5,7 @@ import {
   connectionAssociatedData,
   openSecret,
 } from "@/server/crypto/secret-box";
-import { encodeConnectCookie } from "@/server/google/gmail-oauth";
+import { encodeConnectCookie } from "@/server/google/google-oauth";
 
 const KEY = randomBytes(32);
 const GMAIL_SEND = "https://www.googleapis.com/auth/gmail.send";
@@ -29,9 +29,9 @@ vi.mock("@/config/env", () => ({
     LOG_LEVEL: "info",
   }),
 }));
-vi.mock("@/server/google/gmail-oauth", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/server/google/gmail-oauth")>()),
-  exchangeGmailCode: mocks.exchange,
+vi.mock("@/server/google/google-oauth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/google/google-oauth")>()),
+  exchangeGoogleCode: mocks.exchange,
   revokeGoogleToken: mocks.revoke,
 }));
 vi.mock("@/server/supabase/server-client", () => ({

@@ -1,22 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  createGmailConnectAuthorization,
+  createGoogleConnectAuthorization,
   decodeConnectCookie,
   decodeIdTokenClaims,
   encodeConnectCookie,
-  exchangeGmailCode,
+  exchangeGoogleCode,
   refreshGoogleAccessToken,
   revokeGoogleToken,
-} from "./gmail-oauth";
+} from "./google-oauth";
 
 const idToken = (claims: object) =>
   `x.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.y`;
 const jsonResponse = (body: object, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
-describe("createGmailConnectAuthorization", () => {
+describe("createGoogleConnectAuthorization", () => {
   it("asks for offline gmail.send with PKCE, consent and incremental scopes", () => {
-    const { url, state } = createGmailConnectAuthorization({
+    const { url, state } = createGoogleConnectAuthorization({
       clientId: "client",
       redirectUri:
         "https://tapnshow.vercel.app/api/integrations/google/callback",
@@ -50,7 +50,7 @@ describe("connect cookie", () => {
   });
 });
 
-describe("exchangeGmailCode", () => {
+describe("exchangeGoogleCode", () => {
   it("returns the refresh token, granted scopes and verified claims", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse({
@@ -65,7 +65,7 @@ describe("exchangeGmailCode", () => {
         }),
       }),
     );
-    const grant = await exchangeGmailCode(
+    const grant = await exchangeGoogleCode(
       {
         code: "c",
         verifier: "v",
@@ -101,7 +101,7 @@ describe("exchangeGmailCode", () => {
         }),
       }),
     );
-    const grant = await exchangeGmailCode(
+    const grant = await exchangeGoogleCode(
       {
         code: "c",
         verifier: "v",
@@ -118,7 +118,7 @@ describe("exchangeGmailCode", () => {
         jsonResponse({ error: "invalid_grant", code: "c" }, 400),
       );
     await expect(
-      exchangeGmailCode(
+      exchangeGoogleCode(
         {
           code: "c",
           verifier: "v",
