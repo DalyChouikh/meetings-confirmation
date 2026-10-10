@@ -1100,8 +1100,8 @@ export function contentFingerprint(tab: PlannedTab, content: TabContent): string
 export const SHEET_COLUMNS: number; // 15 visible + 3 hidden helpers = 18
 export function addSheetRequest(sheetId: number, title: string, index: number): SheetsRequest;
 export function deleteSheetRequest(sheetId: number): SheetsRequest;
-export function formatRequests(sheetId: number, existing: { conditionalFormats: number; slicerIds: number[] }, words: SheetWords): SheetsRequest[];
-export function redrawRequests(sheetId: number, title: string, content: TabContent): SheetsRequest[];
+export function formatRequests(sheetId: number, existing: { conditionalFormats: number; slicerIds: number[] }, words: SheetWords, slicerId: number): SheetsRequest[];
+export function redrawRequests(sheetId: number, title: string, content: TabContent, slicerId: number): SheetsRequest[]; // S6: also resets the slicer's range
 // url.ts
 export function sheetUrl(spreadsheetId: string, gid?: number): string;
 export function tabForMeeting(tabs: ReadonlyArray<{ googleSheetId: number; year: number; startsFrom: string | null; startsTo: string | null }>, startsAt: string | null, timezone: string): number | undefined;
@@ -1535,7 +1535,7 @@ const [tab] = planYearTabs(2026, [sheetRow({ id: "m1", startsAt: "2026-10-15T17:
 const content = tabContent(tab, { workspaceName: "GDG", updatedAt: new Date("2026-10-12T21:15:00Z"), timezone: "Africa/Tunis", words });
 
 describe("redrawRequests", () => {
-  const requests = redrawRequests(42, "2026", content);
+  const requests = redrawRequests(42, "2026", content, 77);
 
   it("sets the exact row count (header rows plus at least one row), freezes the header", () => {
     expect(requests[0]).toEqual({
@@ -1557,17 +1557,28 @@ describe("redrawRequests", () => {
     expect(JSON.stringify(write)).toContain('{"userEnteredValue":{"stringValue":"even"}}');
     expect(JSON.stringify(write)).not.toContain("formulaValue");
   });
+
+  it("moves the Meeting filter box's range to the exact last row (S6: a slicer's range does not grow)", () => {
+    expect(requests).toContainEqual({
+      updateSlicerSpec: {
+        slicerId: 77,
+        spec: { dataRange: { sheetId: 42, startRowIndex: 3, endRowIndex: 5, startColumnIndex: 0, endColumnIndex: 15 } },
+        fields: "dataRange",
+      },
+    });
+  });
 });
 
 describe("formatRequests", () => {
   it("replaces old rules and slicers, then adds tone rules before band rules and one slicer", () => {
-    const requests = formatRequests(42, { conditionalFormats: 2, slicerIds: [7] }, words);
+    const requests = formatRequests(42, { conditionalFormats: 2, slicerIds: [7] }, words, 77);
     const kinds = requests.map((request) => Object.keys(request)[0]);
     expect(kinds.slice(0, 3)).toEqual(["deleteConditionalFormatRule", "deleteConditionalFormatRule", "deleteEmbeddedObject"]);
     const rules = requests.filter((request) => "addConditionalFormatRule" in request).map((request) => JSON.stringify(request));
     expect(rules[0]).toContain('=$Q5=\\"success\\"');
     expect(rules.at(-1)).toContain('=$P5=\\"cancelled\\"');
     expect(kinds.filter((kind) => kind === "addSlicer")).toHaveLength(1);
+    expect(JSON.stringify(requests)).toContain('"slicerId":77');
     expect(JSON.stringify(requests)).toContain(String(Math.round((parseInt(EXPORT_COLORS.primary.slice(1, 3), 16) / 255) * 1000) / 1000));
   });
 });
@@ -1669,6 +1680,7 @@ export function formatRequests(
   sheetId: number,
   existing: { conditionalFormats: number; slicerIds: number[] },
   words: SheetWords,
+  slicerId: number,
 ): SheetsRequest[] {
   const whole: [number, number] = [0, VISIBLE];
   const helper = (column: number) => `$${letter(column)}${EXPORT_HEADER_ROWS + 1}`;
@@ -1731,6 +1743,7 @@ export function formatRequests(
     {
       addSlicer: {
         slicer: {
+          slicerId,
           spec: {
             dataRange: range(sheetId, [EXPORT_HEADER_ROWS - 1], whole),
             columnIndex: 0,
@@ -1759,7 +1772,7 @@ const value = (cell: string | number | null): { [key: string]: Json } =>
  * One redraw (spec §8): exact row count (leftover rows go), our title back, borders and fonts on the
  * data rows, fitted widths, and every value from A1 (values only; colours come from the rules).
  */
-export function redrawRequests(sheetId: number, title: string, content: TabContent): SheetsRequest[] {
+export function redrawRequests(sheetId: number, title: string, content: TabContent, slicerId: number): SheetsRequest[] {
   const rows = Math.max(content.values.length, 1);
   const lastRow = EXPORT_HEADER_ROWS + rows;
   const blank = (count: number) => Array.from({ length: count }, () => ({}));
@@ -1772,6 +1785,14 @@ export function redrawRequests(sheetId: number, title: string, content: TabConte
           gridProperties: { rowCount: lastRow, columnCount: SHEET_COLUMNS, frozenRowCount: EXPORT_HEADER_ROWS },
         },
         fields: "title,gridProperties(rowCount,columnCount,frozenRowCount)",
+      },
+    },
+    {
+      // S6: a slicer keeps the row count it was created with, so each redraw resets its range.
+      updateSlicerSpec: {
+        slicerId,
+        spec: { dataRange: range(sheetId, [EXPORT_HEADER_ROWS - 1, lastRow], [0, VISIBLE]) },
+        fields: "dataRange",
       },
     },
     {
@@ -1915,9 +1936,9 @@ PR with `Closes #<issue>`, labels `type:task`, `area:pipeline`. Then `merge-when
 export const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 export const SHEETS_CONNECT_SCOPES: readonly ["openid", "email", typeof DRIVE_FILE_SCOPE];
 export const SPREADSHEET_MIME_TYPE = "application/vnd.google-apps.spreadsheet";
-export const SHEET_TAB_ROWS_MAX: number;      // 10_000 unless S6 says 5_000
+export const SHEET_TAB_ROWS_MAX = 2_000;      // S6: about 1.6 MB and 5 s per tab
 export const SHEET_CELLS_MAX = 19_000_000;
-export const SHEET_REQUEST_TIMEOUT_MS: number; // 15_000 unless S6 says more
+export const SHEET_REQUEST_TIMEOUT_MS = 15_000; // S6: a full tab takes about a third of it
 export const SHEET_BUDGET_MS = 50_000;
 export const SHEET_MIN_LEFT_MS: number;        // SHEET_REQUEST_TIMEOUT_MS + 5_000
 export const SHEET_CLAIM_BATCH = 5;
@@ -3868,7 +3889,8 @@ export type SheetsDeps = {
   hash: (text: string) => string;
   now: () => number;
   newRunId: () => string;
-  newSheetId: () => number;
+  /** A random positive 31-bit id for a new tab or Meeting filter box (Google accepts ids we choose, S6). */
+  newObjectId: () => number;
 };
 export type SheetSyncOptions = { budgetMs: number; minLeftMs: number; batchSize: number; leaseSeconds: number; tabRowsMax: number; cellsMax: number; formatVersion: number };
 export type SheetSyncSummary = { sheets: number; tabs: number; rows: number; skipped: number; paused: number; retried: number };
@@ -3907,7 +3929,7 @@ export function googleTokenDeps(): { refresh: (refreshToken: string) => Promise<
    /** How many colour rules `formatRequests` adds (two band rules, two per tint); a tab with fewer lost some. */
    export const SHEET_RULE_COUNT = 2 + TINTS.length * 2;
    ```
-   with a test in `requests.test.ts`: `formatRequests(1, { conditionalFormats: 0, slicerIds: [] }, words).filter((r) => "addConditionalFormatRule" in r)` has length `SHEET_RULE_COUNT`.
+   with a test in `requests.test.ts`: `formatRequests(1, { conditionalFormats: 0, slicerIds: [] }, words, 2).filter((r) => "addConditionalFormatRule" in r)` has length `SHEET_RULE_COUNT`.
 4. **`results.ts`:** extract the row schema of `listAttendanceDetails` into exported `dbDetailRowSchema` (the `z.object({...})`) and `toDetailRow(db)` (the mapping), and export `dbAnswerSchema`. `listAttendanceDetails` uses both; its tests stay green.
 
 Run: `bun run test src/server src/lib/sheets`
@@ -3924,7 +3946,7 @@ Cover, one `it` each:
 2. "adopts the new file's only tab for the newest year and formats it": `readTabs` returns `[{ sheetId: 0, title: "Sheet1", … }]`. The first batch has no `addSheet`, it does `formatRequests(0, …)`, and `saveTab` gets `googleSheetId: 0, title: "2026"`.
 3. "skips a tab whose content and title didn't change": the stored hash equals the new one, `readTabs` has the id with 10 rules and 1 slicer, so no `batchUpdate` and `skipped` = 1.
 4. "re-applies formatting that someone removed": the same, but `conditionalFormats: 3`, gives one batch with `deleteConditionalFormatRule` × 3 then the new rules.
-5. "recreates a tab someone deleted, with a new id": the stored id is missing from `readTabs`, gives `addSheet` with `newSheetId()`'s value and `saveTab` with that id.
+5. "recreates a tab someone deleted, with a new id": the stored id is missing from `readTabs`, gives `addSheet` with `newObjectId()`'s value and `saveTab` with that id.
 6. "names our tab "2026 (TapNShow)" when someone else's tab is called 2026".
 7. "drops tabs a year no longer needs, in Google and in the store": stored keys `2026-1`, `2026-2`, but the plan has one tab `2026`.
 8. "leaves a year marked when its version moved during the write": `finishYear` returns false and the run still releases with `synced: true`. Then a second run (claims again) writes the same values: compare the fake's cells after both runs, they are equal.
@@ -4158,12 +4180,13 @@ async function syncSheet(
         summary.skipped += 1;
         continue;
       }
-      const sheetId = reuse?.sheetId ?? deps.newSheetId();
+      const sheetId = reuse?.sheetId ?? deps.newObjectId();
+      const slicerId = formatted ? reuse.slicerIds[0] : deps.newObjectId();
       const index = insertIndex({ year, tabKey: tab.key }, stored, live);
       const requests = [
         ...(reuse ? [] : [addSheetRequest(sheetId, title, index)]),
-        ...(formatted ? [] : formatRequests(sheetId, { conditionalFormats: reuse?.conditionalFormats ?? 0, slicerIds: reuse?.slicerIds ?? [] }, words)),
-        ...redrawRequests(sheetId, title, content),
+        ...(formatted ? [] : formatRequests(sheetId, { conditionalFormats: reuse?.conditionalFormats ?? 0, slicerIds: reuse?.slicerIds ?? [] }, words, slicerId)),
+        ...redrawRequests(sheetId, title, content, slicerId),
       ];
       const written = await google((t) => deps.google.batchUpdate(t, file, requests));
       if (written.kind !== "ok") {
@@ -4178,7 +4201,7 @@ async function syncSheet(
       }
       if (!reuse) {
         live = [...live.map((item) => (item.index >= index ? { ...item, index: item.index + 1 } : item)),
-          { sheetId, title, index, conditionalFormats: SHEET_RULE_COUNT, slicerIds: [0] }];
+          { sheetId, title, index, conditionalFormats: SHEET_RULE_COUNT, slicerIds: [slicerId] }];
       }
       if (reuse === adoptable) {
         adoptable = undefined;
@@ -4290,7 +4313,7 @@ export function createSheetsDeps(): SheetsDeps {
     now: () => Date.now(),
     newRunId: () => randomUUID(),
     // Sheets tab ids are positive 31-bit integers; Google keeps 0 for the first tab.
-    newSheetId: () => randomInt(1, 2 ** 31 - 1),
+    newObjectId: () => randomInt(1, 2 ** 31 - 1),
   };
 }
 ```
